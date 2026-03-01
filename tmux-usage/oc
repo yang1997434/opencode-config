@@ -1,0 +1,21 @@
+#!/bin/bash
+# OpenCode with tmux status bar (rate limits display)
+# Usage: oc [project-path]
+
+SESSION="opencode"
+OPENCODE="$HOME/.opencode/bin/opencode"
+PROJECT="${1:-.}"
+
+# Already inside tmux? Just run opencode directly
+if [ -n "$TMUX" ]; then
+  exec "$OPENCODE" "$PROJECT"
+fi
+
+# Kill existing session if any
+tmux kill-session -t "$SESSION" 2>/dev/null
+
+# Create new tmux session with opencode
+tmux new-session -d -s "$SESSION" -x "$(tput cols)" -y "$(tput lines)" "$OPENCODE $PROJECT"
+
+# Attach
+exec tmux attach-session -t "$SESSION"

@@ -41,6 +41,12 @@ Complete installation and configuration for [OpenCode](https://opencode.ai) with
 ├── node_modules/                     # Plugin modules (auto-installed)
 └── bun.lock
 
+~/.local/bin/                           # Custom scripts
+├── opencode-usage-status              # Anthropic rate limit → tmux status bar
+└── oc                                 # opencode + tmux launcher
+
+~/.tmux.conf                            # tmux config (status bar with usage display)
+
 ~/.local/share/opencode/              # Data directory (auto-created)
 ├── auth.json                         # OAuth tokens (never commit!)
 ├── opencode.db                       # Session database (SQLite)

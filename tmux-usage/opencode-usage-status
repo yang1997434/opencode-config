@@ -1,0 +1,214 @@
+#!/usr/bin/env node
+/**
+ * OpenCode tmux status bar — Anthropic rate limit display (mini progress bars)
+ *
+ * Reads OAuth token from OpenCode's auth store (~/.local/share/opencode/auth.json),
+ * refreshes if expired, calls Anthropic usage API, outputs tmux-formatted string.
+ */
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+
+const AUTH_PATH = path.join(process.env.HOME, '.local', 'share', 'opencode', 'auth.json');
+const CACHE_PATH = path.join(process.env.HOME, '.cache', 'opencode', 'usage-cache.json');
+const CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e';
+const CACHE_TTL = 30_000;
+
+// ---- Tmux formatting ----
+
+const RST = '#[fg=default]';
+const DIM = '#[fg=colour242]'; // muted grey for labels & low-priority text
+
+function fg(pct) {
+  if (pct >= 90) return '#[fg=colour196]';  // bright red
+  if (pct >= 70) return '#[fg=colour208]';  // orange
+  if (pct >= 50) return '#[fg=colour220]';  // yellow
+  return '#[fg=colour114]';                  // soft green
+}
+
+function fgBar(pct) {
+  // bar fill colour — slightly dimmer than the number
+  if (pct >= 90) return '#[fg=colour160]';
+  if (pct >= 70) return '#[fg=colour172]';
+  if (pct >= 50) return '#[fg=colour178]';
+  return '#[fg=colour71]';
+}
+
+const BAR_BG = '#[fg=colour236]'; // dark grey for empty part of bar
+
+// ---- Helpers ----
+
+function bar(pct, width = 6) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  const filled = Math.round((clamped / 100) * width);
+  const empty = width - filled;
+  return `${fgBar(pct)}${'█'.repeat(filled)}${BAR_BG}${'░'.repeat(empty)}${RST}`;
+}
+
+function dur(iso) {
+  if (!iso) return '';
+  const ms = new Date(iso).getTime() - Date.now();
+  if (ms <= 0) return '';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h >= 24) return `${Math.floor(h / 24)}d${h % 24}h`;
+  return `${h}h${m}m`;
+}
+
+// ---- Render ----
+
+function render(d) {
+  const sections = [];
+
+  if (d.five_hour) {
+    const p = d.five_hour.utilization;
+    const reset = dur(d.five_hour.resets_at);
+    let s = `${DIM}5h${RST} ${bar(p)} ${fg(p)}${p}%${RST}`;
+    if (reset) s += ` ${DIM}${reset}${RST}`;
+    sections.push(s);
+  }
+
+  if (d.seven_day) {
+    const p = d.seven_day.utilization;
+    const reset = dur(d.seven_day.resets_at);
+    let s = `${DIM}7d${RST} ${bar(p)} ${fg(p)}${p}%${RST}`;
+    if (reset) s += ` ${DIM}${reset}${RST}`;
+    sections.push(s);
+  }
+
+  if (d.seven_day_sonnet) {
+    const p = d.seven_day_sonnet.utilization;
+    sections.push(`${DIM}son${RST} ${bar(p, 4)} ${fg(p)}${p}%${RST}`);
+  }
+
+  if (d.seven_day_opus) {
+    const p = d.seven_day_opus.utilization;
+    sections.push(`${DIM}opus${RST} ${bar(p, 4)} ${fg(p)}${p}%${RST}`);
+  }
+
+  return sections.join(` ${DIM}│${RST} `);
+}
+
+// ---- HTTP helpers (no deps) ----
+
+function httpsPost(hostname, urlPath, body) {
+  return new Promise((resolve, reject) => {
+    const data = typeof body === 'string' ? body : JSON.stringify(body);
+    const isForm = typeof body === 'string';
+    const req = https.request({
+      hostname, path: urlPath, method: 'POST',
+      headers: {
+        'Content-Type': isForm ? 'application/x-www-form-urlencoded' : 'application/json',
+        'Content-Length': Buffer.byteLength(data),
+      },
+      timeout: 8000,
+    }, res => {
+      let buf = '';
+      res.on('data', c => buf += c);
+      res.on('end', () => resolve({ status: res.statusCode, body: buf }));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.write(data);
+    req.end();
+  });
+}
+
+function httpsGet(hostname, urlPath, headers) {
+  return new Promise((resolve, reject) => {
+    const req = https.request({
+      hostname, path: urlPath, method: 'GET', headers, timeout: 8000,
+    }, res => {
+      let buf = '';
+      res.on('data', c => buf += c);
+      res.on('end', () => resolve({ status: res.statusCode, body: buf }));
+    });
+    req.on('error', reject);
+    req.on('timeout', () => { req.destroy(); reject(new Error('timeout')); });
+    req.end();
+  });
+}
+
+// ---- Auth ----
+
+function readAuth() {
+  try {
+    const data = JSON.parse(fs.readFileSync(AUTH_PATH, 'utf-8'));
+    return data.anthropic;
+  } catch { return null; }
+}
+
+function writeAuth(updated) {
+  try {
+    const data = JSON.parse(fs.readFileSync(AUTH_PATH, 'utf-8'));
+    data.anthropic = { ...data.anthropic, ...updated };
+    fs.writeFileSync(AUTH_PATH, JSON.stringify(data, null, 2), { mode: 0o600 });
+  } catch {}
+}
+
+async function ensureToken(auth) {
+  if (!auth) return null;
+  if (auth.expires && auth.expires - Date.now() > 60_000) return auth.access;
+  if (!auth.refresh) return null;
+  try {
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: auth.refresh,
+      client_id: CLIENT_ID,
+    }).toString();
+    const res = await httpsPost('console.anthropic.com', '/v1/oauth/token', body);
+    if (res.status !== 200) return null;
+    const json = JSON.parse(res.body);
+    if (!json.access_token) return null;
+    const updated = {
+      access: json.access_token,
+      refresh: json.refresh_token || auth.refresh,
+      expires: json.expires_in ? Date.now() + json.expires_in * 1000 : Date.now() + 3600_000,
+    };
+    writeAuth(updated);
+    return updated.access;
+  } catch { return null; }
+}
+
+// ---- Cache ----
+
+function readCache() {
+  try {
+    const raw = JSON.parse(fs.readFileSync(CACHE_PATH, 'utf-8'));
+    if (raw.data && Date.now() - raw.ts < CACHE_TTL) return raw.data;
+  } catch {}
+  return null;
+}
+
+function writeCache(data) {
+  try {
+    const dir = path.dirname(CACHE_PATH);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(CACHE_PATH, JSON.stringify({ ts: Date.now(), data }));
+  } catch {}
+}
+
+// ---- Main ----
+
+async function main() {
+  const cached = readCache();
+  if (cached) { process.stdout.write(render(cached)); return; }
+
+  const auth = readAuth();
+  const token = await ensureToken(auth);
+  if (!token) { process.stdout.write(`${DIM}⏳${RST}`); return; }
+
+  const res = await httpsGet('api.anthropic.com', '/api/oauth/usage', {
+    Authorization: `Bearer ${token}`,
+    'anthropic-beta': 'oauth-2025-04-20',
+    Accept: 'application/json',
+  });
+
+  if (res.status !== 200) { process.stdout.write(`#[fg=colour196]⚠${RST}`); return; }
+
+  const data = JSON.parse(res.body);
+  writeCache(data);
+  process.stdout.write(render(data));
+}
+
+main().catch(() => process.stdout.write(`#[fg=colour196]⚠${RST}`));
