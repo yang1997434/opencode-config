@@ -1,371 +1,53 @@
 {
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "oh-my-opencode@latest"
+  ],
   "provider": {
-    "openai": {
-      "options": {
-        "baseURL": "https://codex.viloze.com/v1",
-        "apiKey": "YOUR_OPENAI_RELAY_API_KEY"
-      },
-      "models": {
-        "gpt-5.2-codex": {
-          "name": "GPT-5.2 Codex",
-          "options": {
-            "store": false
-          },
-          "variants": {
-            "low": {},
-            "medium": {},
-            "high": {},
-            "xhigh": {}
-          }
-        }
-      }
-    },
-    "google": {
-      "name": "Google",
-      "options": {
-        "baseURL": "https://code.newcli.com/gemini",
-        "apiKey": "YOUR_GOOGLE_RELAY_API_KEY"
-      },
-      "models": {
-        "gemini-3-pro-preview": {
-          "name": "Gemini 3 Pro Preview (Relay)",
-          "limit": {
-            "context": 1048576,
-            "output": 65535
-          },
-          "modalities": {
-            "input": [
-              "text",
-              "image",
-              "pdf"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "variants": {
-            "low": {
-              "thinkingLevel": "low"
-            },
-            "high": {
-              "thinkingLevel": "high"
-            }
-          }
-        },
-        "gemini-3-flash-preview": {
-          "name": "Gemini 3 Flash Preview (Relay)",
-          "limit": {
-            "context": 1048576,
-            "output": 65536
-          },
-          "modalities": {
-            "input": [
-              "text",
-              "image",
-              "pdf"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "variants": {
-            "low": {
-              "thinkingLevel": "low"
-            },
-            "medium": {
-              "thinkingLevel": "medium"
-            },
-            "high": {
-              "thinkingLevel": "high"
-            }
-          }
-        },
-        "antigravity-gemini-3-pro": {
-          "name": "Gemini 3 Pro (Antigravity)",
-          "limit": {
-            "context": 1048576,
-            "output": 65535
-          },
-          "modalities": {
-            "input": [
-              "text",
-              "image",
-              "pdf"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "variants": {
-            "low": {
-              "thinkingLevel": "low"
-            },
-            "high": {
-              "thinkingLevel": "high"
-            }
-          }
-        },
-        "antigravity-gemini-3-flash": {
-          "name": "Gemini 3 Flash (Antigravity)",
-          "limit": {
-            "context": 1048576,
-            "output": 65536
-          },
-          "modalities": {
-            "input": [
-              "text",
-              "image",
-              "pdf"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "variants": {
-            "minimal": {
-              "thinkingLevel": "minimal"
-            },
-            "low": {
-              "thinkingLevel": "low"
-            },
-            "medium": {
-              "thinkingLevel": "medium"
-            },
-            "high": {
-              "thinkingLevel": "high"
-            }
-          }
-        },
-        "antigravity-claude-sonnet-4-6": {
-          "name": "Claude Sonnet 4.6 (Antigravity)",
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          },
-          "modalities": {
-            "input": [
-              "text",
-              "image",
-              "pdf"
-            ],
-            "output": [
-              "text"
-            ]
-          }
-        },
-        "antigravity-claude-sonnet-4-6-thinking": {
-          "name": "Claude Sonnet 4.6 Thinking (Antigravity)",
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          },
-          "modalities": {
-            "input": [
-              "text",
-              "image",
-              "pdf"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "variants": {
-            "low": {
-              "thinkingConfig": {
-                "thinkingBudget": 8192
-              }
-            },
-            "max": {
-              "thinkingConfig": {
-                "thinkingBudget": 32768
-              }
-            }
-          }
-        },
-        "antigravity-claude-opus-4-5-thinking": {
-          "name": "Claude Opus 4.5 Thinking (Antigravity)",
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          },
-          "modalities": {
-            "input": [
-              "text",
-              "image",
-              "pdf"
-            ],
-            "output": [
-              "text"
-            ]
-          },
-          "variants": {
-            "low": {
-              "thinkingConfig": {
-                "thinkingBudget": 8192
-              }
-            },
-            "max": {
-              "thinkingConfig": {
-                "thinkingBudget": 32768
-              }
-            }
-          }
-        }
-      }
-    },
     "aipro": {
-      "name": "AIPro (DR)",
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "AIPro Gemini",
       "options": {
         "baseURL": "https://vip.aipro.love/v1",
         "apiKey": "YOUR_AIPRO_API_KEY"
       },
       "models": {
-        "claude-opus-4-6": {
-          "name": "Claude Opus 4.6 (AIPro)",
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          }
-        },
-        "claude-opus-4-6-thinking": {
-          "name": "Claude Opus 4.6 Thinking (AIPro)",
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          },
-          "variants": {
-            "low": {
-              "thinkingConfig": {
-                "thinkingBudget": 8192
-              }
-            },
-            "high": {
-              "thinkingConfig": {
-                "thinkingBudget": 16384
-              }
-            },
-            "max": {
-              "thinkingConfig": {
-                "thinkingBudget": 32768
-              }
-            }
-          }
-        },
-        "claude-sonnet-4-6": {
-          "name": "Claude Sonnet 4.6 (AIPro)",
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          }
-        },
-        "claude-haiku-4-5-20251001": {
-          "name": "Claude Haiku 4.5 (AIPro)",
-          "limit": {
-            "context": 200000,
-            "output": 64000
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          }
-        },
-        "gemini-3.1-pro-high": {
-          "name": "Gemini 3.1 Pro High (AIPro)",
-          "limit": {
-            "context": 1048576,
-            "output": 65535
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          }
-        },
-        "gemini-3.1-pro-preview": {
-          "name": "Gemini 3.1 Pro Preview (AIPro)",
-          "limit": {
-            "context": 1048576,
-            "output": 65535
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          }
-        },
         "gemini-3-flash": {
-          "name": "Gemini 3 Flash (AIPro)",
+          "name": "Gemini 3 Flash",
           "limit": {
             "context": 1048576,
             "output": 65536
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          }
-        },
-        "gemini-2.5-pro": {
-          "name": "Gemini 2.5 Pro (AIPro)",
-          "limit": {
-            "context": 1048576,
-            "output": 65535
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
-          }
-        },
-        "gemini-2.5-flash": {
-          "name": "Gemini 2.5 Flash (AIPro)",
-          "limit": {
-            "context": 1048576,
-            "output": 65536
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
           }
         },
         "gemini-3-flash-preview": {
-          "name": "Gemini 3 Flash Preview (AIPro)",
+          "name": "Gemini 3 Flash Preview",
           "limit": {
             "context": 1048576,
             "output": 65536
-          },
-          "modalities": {
-            "input": ["text", "image", "pdf"],
-            "output": ["text"]
+          }
+        },
+        "gemini-3.1-pro-preview": {
+          "name": "Gemini 3.1 Pro Preview",
+          "limit": {
+            "context": 1048576,
+            "output": 65535
+          }
+        },
+        "gemini-3.1-pro-high": {
+          "name": "Gemini 3.1 Pro High",
+          "limit": {
+            "context": 1048576,
+            "output": 65535
+          }
+        },
+        "gemini-2.5-pro": {
+          "name": "Gemini 2.5 Pro",
+          "limit": {
+            "context": 1048576,
+            "output": 65535
           }
         }
       }
     }
-  },
-  "agent": {
-    "build": {
-      "options": {
-        "store": false
-      }
-    },
-    "plan": {
-      "options": {
-        "store": false
-      }
-    }
-  },
-  "$schema": "https://opencode.ai/config.json",
-  "plugin": [
-    "oh-my-opencode@latest",
-    "./plugins/gotify-notify.js",
-    "./plugins/omo-env-remover.js"
-  ]
+  }
 }
