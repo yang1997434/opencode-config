@@ -107,7 +107,7 @@ cp ~/.config/opencode/opencode.json.example ~/.config/opencode/opencode.json
 ```
 
 Edit `~/.config/opencode/opencode.json` and replace:
-- `YOUR_AIPRO_API_KEY` — Your AIPro API key (get from https://aipro.love)
+- `YOUR_AIPRO_API_KEY` — Your AIPro API key (get from [https://aipro.love](https://docs.aipro.love/))
 
 ### Step 5: Install Plugin Dependencies
 
