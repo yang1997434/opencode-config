@@ -1,6 +1,6 @@
 # opencode-config
 
-Complete installation and configuration for [OpenCode](https://opencode.ai) with [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) multi-model agent routing.
+Complete installation and configuration for [OpenCode](https://opencode.ai) with [oh-my-opencode](https://github.com/code-yeongyu/oh-my-opencode) multi-model agent routing and **runtime failover**.
 
 **Goal**: Any AI or human reading this can fully replicate this setup from scratch.
 
@@ -151,62 +151,64 @@ The main config file defines:
 1. **Plugins**: `oh-my-opencode@latest` for multi-model routing
 2. **Providers**: Custom OpenAI-compatible providers (like AIPro) with model definitions
 
-Current setup uses a single relay provider:
+Current setup uses a single relay provider (AIPro) that provides access to both **Claude** and **Gemini** models via an OpenAI-compatible API:
 
-```json
-{
-  "plugin": ["oh-my-opencode@latest"],
-  "provider": {
-    "aipro": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "AIPro Gemini",
-      "options": {
-        "baseURL": "https://vip.aipro.love/v1",
-        "apiKey": "YOUR_AIPRO_API_KEY"
-      },
-      "models": {
-        "gemini-3-flash": { ... },
-        "gemini-3.1-pro-preview": { ... },
-        "gemini-2.5-pro": { ... }
-      }
-    }
-  }
-}
-```
-
-**Why AIPro?** It provides access to Gemini models via an OpenAI-compatible API, useful for models not natively supported by OpenCode.
+- **Claude models via AIPro** (`aipro/claude-opus-4-6`, `aipro/claude-sonnet-4-6`): used as **fallback targets** when direct Anthropic API is down
+- **Gemini models via AIPro**: used for visual-engineering, artistry, writing, and multimodal tasks
 
 ### oh-my-opencode.json — Agent & Category Routing
 
-This is the brain of the multi-model setup. It routes different agent roles and task categories to specific models.
+This is the brain of the multi-model setup. It routes different agent roles and task categories to specific models, with **automatic failover**.
 
 #### Agent Routing
 
-| Agent | Model | Variant | Role |
-|-------|-------|---------|------|
-| **sisyphus** | anthropic/claude-opus-4-6 | max | Main orchestrator agent |
-| **hephaestus** | openai/gpt-5.3-codex | medium | Implementation worker |
-| **oracle** | openai/gpt-5.2 | high | Read-only architecture consultant |
-| **librarian** | anthropic/claude-sonnet-4-6 | — | External reference search |
-| **explore** | anthropic/claude-haiku-4-5 | — | Codebase grep agent |
-| **multimodal-looker** | aipro/gemini-3-flash-preview | — | Image/PDF analysis |
-| **prometheus** | anthropic/claude-opus-4-6 | max | Planning agent |
-| **metis** | anthropic/claude-opus-4-6 | max | Pre-planning analysis |
-| **momus** | openai/gpt-5.2 | medium | Plan review/QA |
-| **atlas** | anthropic/claude-sonnet-4-6 | — | General support |
+| Agent | Model | Variant | Fallback Chain | Role |
+|-------|-------|---------|---------------|------|
+| **sisyphus** | anthropic/claude-opus-4-6 | max | aipro/claude-opus-4-6 → openai/gpt-5.2 | Main orchestrator |
+| **hephaestus** | openai/gpt-5.3-codex | medium | anthropic/claude-opus-4-6 → aipro/claude-opus-4-6 | Implementation worker |
+| **oracle** | openai/gpt-5.2 | high | anthropic/claude-opus-4-6 → aipro/claude-opus-4-6 | Architecture consultant |
+| **librarian** | anthropic/claude-sonnet-4-6 | — | aipro/claude-sonnet-4-6 → aipro/gemini-3.1-pro-preview | Reference search |
+| **explore** | anthropic/claude-haiku-4-5 | — | aipro/gemini-3-flash | Codebase grep |
+| **multimodal-looker** | aipro/gemini-3-flash-preview | — | aipro/gemini-3-flash → aipro/gemini-2.5-pro | Image/PDF analysis |
+| **prometheus** | anthropic/claude-opus-4-6 | max | aipro/claude-opus-4-6 → openai/gpt-5.2 | Planning |
+| **metis** | anthropic/claude-opus-4-6 | max | aipro/claude-opus-4-6 → openai/gpt-5.2 | Pre-planning analysis |
+| **momus** | openai/gpt-5.2 | medium | anthropic/claude-opus-4-6 → aipro/claude-opus-4-6 | Plan review/QA |
+| **atlas** | anthropic/claude-sonnet-4-6 | — | aipro/claude-sonnet-4-6 → aipro/gemini-3.1-pro-preview | General support |
 
 #### Category Routing
 
-| Category | Model | Variant | Use Case |
-|----------|-------|---------|----------|
-| **visual-engineering** | aipro/gemini-3.1-pro-preview | — | Frontend, UI/UX, design |
-| **ultrabrain** | openai/gpt-5.3-codex | xhigh | Hard logic problems |
-| **deep** | openai/gpt-5.3-codex | medium | Deep autonomous research |
-| **artistry** | aipro/gemini-3.1-pro-preview | — | Creative problem-solving |
-| **quick** | anthropic/claude-haiku-4-5 | — | Trivial single-file changes |
-| **unspecified-low** | anthropic/claude-sonnet-4-6 | — | Misc low-effort tasks |
-| **unspecified-high** | anthropic/claude-opus-4-6 | max | Misc high-effort tasks |
-| **writing** | aipro/gemini-3-flash-preview | — | Documentation, prose |
+| Category | Model | Variant | Fallback Chain | Use Case |
+|----------|-------|---------|---------------|----------|
+| **visual-engineering** | aipro/gemini-3.1-pro-preview | — | aipro/gemini-2.5-pro → anthropic/claude-sonnet-4-6 | Frontend, UI/UX |
+| **ultrabrain** | openai/gpt-5.3-codex | xhigh | anthropic/claude-opus-4-6 → aipro/claude-opus-4-6 | Hard logic problems |
+| **deep** | openai/gpt-5.3-codex | medium | anthropic/claude-opus-4-6 → aipro/claude-opus-4-6 | Deep research |
+| **artistry** | aipro/gemini-3.1-pro-preview | — | aipro/gemini-2.5-pro → anthropic/claude-sonnet-4-6 | Creative problem-solving |
+| **quick** | anthropic/claude-haiku-4-5 | — | aipro/gemini-3-flash | Trivial changes |
+| **unspecified-low** | anthropic/claude-sonnet-4-6 | — | aipro/claude-sonnet-4-6 → aipro/gemini-3.1-pro-preview | Misc low-effort |
+| **unspecified-high** | anthropic/claude-opus-4-6 | max | aipro/claude-opus-4-6 → openai/gpt-5.2 | Misc high-effort |
+| **writing** | aipro/gemini-3-flash-preview | — | aipro/gemini-3-flash → anthropic/claude-sonnet-4-6 | Documentation |
+
+#### Runtime Fallback (Disaster Recovery)
+
+Enabled via oh-my-opencode's `runtime_fallback` feature. When the primary model returns a retryable error (429, 500, 502, 503, 504, 529), it automatically tries the next model in the fallback chain.
+
+```json
+"runtime_fallback": {
+  "enabled": true,
+  "retry_on_errors": [429, 500, 502, 503, 504, 529],
+  "max_fallback_attempts": 3,
+  "cooldown_seconds": 60,
+  "timeout_seconds": 30,
+  "notify_on_fallback": true
+}
+```
+
+**Fallback strategy**:
+- **Anthropic down** → AIPro relay (same Claude model) → OpenAI cross-vendor
+- **OpenAI down** → Anthropic → AIPro relay
+- **AIPro down** → other AIPro model → Anthropic direct
+
+Three providers, three independent failure domains. All three going down simultaneously is extremely unlikely.
 
 #### Alternative Routing: oh-my-opencode.dr.json
 
@@ -306,7 +308,7 @@ skills/
 |------|------|---------|
 | Binary | `~/.opencode/bin/opencode` | OpenCode executable |
 | Main config | `~/.config/opencode/opencode.json` | Providers + API keys |
-| Agent routing | `~/.config/opencode/oh-my-opencode.json` | Model assignments |
+| Agent routing | `~/.config/opencode/oh-my-opencode.json` | Model assignments + fallback |
 | Auth tokens | `~/.local/share/opencode/auth.json` | OAuth credentials |
 | Session DB | `~/.local/share/opencode/opencode.db` | Chat history |
 | Logs | `~/.local/share/opencode/log/` | Debug logs |

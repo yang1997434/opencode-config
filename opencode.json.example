@@ -6,12 +6,26 @@
   "provider": {
     "aipro": {
       "npm": "@ai-sdk/openai-compatible",
-      "name": "AIPro Gemini",
+      "name": "AIPro",
       "options": {
         "baseURL": "https://vip.aipro.love/v1",
         "apiKey": "YOUR_AIPRO_API_KEY"
       },
       "models": {
+        "claude-opus-4-6": {
+          "name": "Claude Opus 4.6 (AIPro)",
+          "limit": {
+            "context": 200000,
+            "output": 64000
+          }
+        },
+        "claude-sonnet-4-6": {
+          "name": "Claude Sonnet 4.6 (AIPro)",
+          "limit": {
+            "context": 200000,
+            "output": 64000
+          }
+        },
         "gemini-3-flash": {
           "name": "Gemini 3 Flash",
           "limit": {
